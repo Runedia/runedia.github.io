@@ -36,7 +36,7 @@
       min-height: 100vh;
       display: grid;
       grid-template-columns: 200px 1fr;
-      max-width: 1240px;
+      max-width: 80%;
       margin: 0 auto;
       padding: 36px 28px;
       gap: 0 28px;
@@ -192,12 +192,28 @@
     .project-item .pi { font-size: 14px; flex-shrink: 0; }
 
     /* ── 기여 ── */
-    .contribution-text {
+    .contribution-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .contribution-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
       font-size: 12.5px;
-      line-height: 1.85;
+      line-height: 1.7;
       color: var(--sub);
-      border-left: 3px solid var(--accent);
-      padding-left: 12px;
+    }
+
+    .contribution-item .ci-dot {
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 6px;
     }
 
     /* ── 경력 ── */
@@ -332,10 +348,15 @@
     <div class="section sec-contrib">
       <div class="section-label">04 · Contribution</div>
       <div class="section-title">팀에 대한 기여</div>
-      <div class="contribution-text">
-        AI 도구를 효율적으로 활용하여 빠른 결과를 도출하고, 명확한 요구사항 정의와 체계적 분석을 통해 팀의 방향성 정립에 기여합니다.
-		<br>
-		또한 Python·Java 기반 백엔드 구현 및 기술 문서화를 담당할 수 있습니다.
+      <div class="contribution-list">
+        <div class="contribution-item">
+          <span class="ci-dot"></span>
+          <span>AI 도구를 효율적으로 활용하여 빠른 결과를 도출하고, 명확한 요구사항 정의와 체계적 분석을 통해 팀의 방향성 정립에 기여할 수 있습니다.</span>
+        </div>
+        <div class="contribution-item">
+          <span class="ci-dot"></span>
+          <span>Node.js · Python · Java 기반 백엔드 구현 및 기술 문서화를 담당할 수 있습니다.</span>
+        </div>
       </div>
     </div>
 
