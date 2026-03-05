@@ -1,289 +1,367 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>김지호 | 자기소개</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <title>자기소개</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --border: #1e1e2e;
-      --accent: #7c6aff;
-      --accent2: #38e8c0;
-      --text: #e8e8f0;
-      --muted: #6b6b8a;
-      --card: #13131f;
+      --bg:      #f5f4f0;
+      --surface: #ffffff;
+      --border:  #e2e0d8;
+      --border2: #d0cdc3;
+      --accent:  #2d6be4;
+      --accent2: #0f9f7e;
+      --text:    #1a1a1a;
+      --sub:     #555550;
+      --muted:   #99988f;
+      --tag-bg:  #eeecea;
+      --card:    #faf9f6;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
+    html, body {
+      height: 100%;
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Noto Serif KR', serif;
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
       min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(124,106,255,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(124,106,255,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .container {
-      max-width: 780px;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 80px 32px 120px;
-      position: relative;
-      z-index: 1;
+      padding: 36px 28px;
+      gap: 0 28px;
     }
 
-    /* Header */
-    header {
-      margin-bottom: 72px;
-      animation: fadeUp 0.8s ease both;
+    /* ── 사이드바 ── */
+    .sidebar {
+      padding-right: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 0.5s ease both;
     }
 
-    .badge {
-      display: inline-block;
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 0.15em;
-      color: var(--accent2);
-      border: 1px solid rgba(56,232,192,0.3);
-      padding: 4px 12px;
-      border-radius: 2px;
-      margin-bottom: 24px;
+    .sidebar-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 12px;
     }
 
-    h1 {
-      font-size: clamp(42px, 8vw, 72px);
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
+    .sidebar h1 {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
 
-    .student-id {
-      font-family: 'Space Mono', monospace;
-      font-size: 13px;
+    .sidebar .student-id {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
       color: var(--muted);
-      letter-spacing: 0.1em;
-      margin-top: 12px;
+      margin-top: 6px;
     }
 
-    .divider {
-      width: 48px;
+    .sidebar-divider {
+      width: 28px;
       height: 2px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
-      margin: 32px 0;
+      margin: 16px 0;
     }
 
-    /* Sections */
-    section {
-      margin-bottom: 56px;
-      animation: fadeUp 0.8s ease both;
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
-    section:nth-child(2) { animation-delay: 0.1s; }
-    section:nth-child(3) { animation-delay: 0.2s; }
-    section:nth-child(4) { animation-delay: 0.3s; }
-    section:nth-child(5) { animation-delay: 0.4s; }
-
-    .section-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 0.2em;
+    .nav-item {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .section-title {
-      font-size: 22px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: var(--text);
-    }
-
-    /* Tags */
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .tag {
-      font-family: 'Space Mono', monospace;
-      font-size: 12px;
-      padding: 7px 16px;
-      border-radius: 2px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      transition: all 0.2s ease;
+      color: var(--muted);
+      padding: 5px 0 5px 10px;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
       cursor: default;
     }
 
-    .tag:hover {
-      border-color: var(--accent);
+    .nav-item:hover, .nav-item.active {
       color: var(--accent);
-      background: rgba(124,106,255,0.08);
+      border-left-color: var(--accent);
     }
 
-    .tag.accent {
-      border-color: rgba(124,106,255,0.4);
-      color: var(--accent);
-      background: rgba(124,106,255,0.06);
-    }
-
-    .tag.teal {
-      border-color: rgba(56,232,192,0.4);
-      color: var(--accent2);
-      background: rgba(56,232,192,0.06);
-    }
-
-    /* Project cards */
-    .project-grid {
+    /* ── 메인 그리드 ── */
+    .main {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 14px;
+      align-content: start;
+      animation: fadeIn 0.5s 0.08s ease both;
     }
 
-    @media (max-width: 520px) {
-      .project-grid { grid-template-columns: 1fr; }
-    }
-
-    .project-card {
-      background: var(--card);
+    /* ── 섹션 공통 ── */
+    .section {
+      background: var(--surface);
       border: 1px solid var(--border);
-      padding: 20px;
-      border-radius: 4px;
-      transition: border-color 0.2s, transform 0.2s;
+      border-radius: 8px;
+      padding: 16px 18px;
+      transition: box-shadow 0.2s;
     }
 
-    .project-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
+    .section:hover {
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
 
-    .project-card .icon {
-      font-size: 20px;
-      margin-bottom: 10px;
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 7px;
     }
 
-    .project-card .name {
+    .section-title {
       font-size: 14px;
       font-weight: 600;
       color: var(--text);
+      margin-bottom: 10px;
     }
 
-    /* Contribution box */
-    .contribution {
+    /* ── 태그 ── */
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .tag {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 4px;
+      background: var(--tag-bg);
+      color: var(--sub);
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+
+    .tag:hover { background: #e6e4de; border-color: var(--border2); }
+
+    .tag.blue { background: #ebf0fd; color: var(--accent); border-color: #c5d4f8; }
+    .tag.green { background: #e5f5f0; color: var(--accent2); border-color: #a8dcd0; }
+
+    /* ── 프로젝트 ── */
+    .project-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .project-item {
       background: var(--card);
       border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      padding: 24px 28px;
-      border-radius: 0 4px 4px 0;
-      font-size: 15px;
-      line-height: 1.8;
-      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 11px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--sub);
+      transition: all 0.15s;
     }
 
-    /* Animations */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
+    .project-item:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #f0f4fd;
+    }
+
+    .project-item .pi { font-size: 14px; flex-shrink: 0; }
+
+    /* ── 기여 ── */
+    .contribution-text {
+      font-size: 12.5px;
+      line-height: 1.85;
+      color: var(--sub);
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+    }
+
+    /* ── 경력 ── */
+    .career-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .career-meta { flex-shrink: 0; min-width: 170px; }
+
+    .career-period {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--accent2);
+      letter-spacing: 0.07em;
+      margin-bottom: 5px;
+    }
+
+    .career-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      margin-bottom: 4px;
+    }
+
+    .career-domain {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .career-stack { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+
+    /* ── 그리드 배치 ── */
+    .sec-interest { grid-column: 1; grid-row: 1; }
+    .sec-lang     { grid-column: 2; grid-row: 1; }
+    .sec-project  { grid-column: 1; grid-row: 2; }
+    .sec-contrib  { grid-column: 2; grid-row: 2; }
+    .sec-career   { grid-column: 1 / 3; grid-row: 3; }
+
+    /* ── 애니메이션 ── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── 반응형 ── */
+    @media (max-width: 720px) {
+      .page {
+        grid-template-columns: 1fr;
+        padding: 20px 16px;
+        gap: 16px;
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding-right: 0;
+        padding-bottom: 18px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0 14px;
+      }
+
+      .sidebar-badge { width: 100%; margin-bottom: 6px; }
+      .sidebar h1 { font-size: 26px; }
+      .sidebar-divider, .sidebar-nav { display: none; }
+
+      .main { grid-template-columns: 1fr; }
+
+      .sec-interest, .sec-lang, .sec-project,
+      .sec-contrib, .sec-career {
+        grid-column: 1;
+        grid-row: auto;
+      }
+
+      .career-inner { flex-direction: column; gap: 10px; }
     }
   </style>
 </head>
 <body>
-<div class="container">
+<div class="page">
 
-  <header>
-    <div class="badge">Self Introduction</div>
+  <aside class="sidebar">
+    <div class="sidebar-badge">Self Introduction</div>
     <h1>김지호</h1>
-    <div class="student-id">학번 &nbsp;/&nbsp; 20210948</div>
-    <div class="divider"></div>
-  </header>
+    <div class="student-id">20210948</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <div class="nav-item">01 · Interest</div>
+      <div class="nav-item">02 · Language</div>
+      <div class="nav-item">03 · Project</div>
+      <div class="nav-item">04 · Contribution</div>
+      <div class="nav-item">05 · Career</div>
+    </nav>
+  </aside>
 
-  <!-- 관심 분야 -->
-  <section>
-    <div class="section-label">01 &nbsp; Interest</div>
-    <div class="section-title">관심 분야</div>
-    <div class="tags">
-      <span class="tag accent">머신러닝 / 딥러닝</span>
-      <span class="tag accent">웹 개발</span>
-      <span class="tag accent">백엔드</span>
-    </div>
-  </section>
+  <main class="main">
 
-  <!-- 기술 스택 -->
-  <section>
-    <div class="section-label">02 &nbsp; Skills</div>
-    <div class="section-title">잘하는 것</div>
-    <div class="tags">
-      <span class="tag teal">Python</span>
-      <span class="tag teal">Java</span>
-      <span class="tag teal">Node.js</span>
-    </div>
-  </section>
-
-  <!-- 희망 프로젝트 -->
-  <section>
-    <div class="section-label">03 &nbsp; Project</div>
-    <div class="section-title">희망 프로젝트 주제</div>
-    <div class="project-grid">
-      <div class="project-card">
-        <div class="icon">🤖</div>
-        <div class="name">AI / 머신러닝 활용 서비스</div>
-      </div>
-      <div class="project-card">
-        <div class="icon">🎮</div>
-        <div class="name">게임 관련</div>
-      </div>
-      <div class="project-card">
-        <div class="icon">🌐</div>
-        <div class="name">웹 플랫폼 / 커뮤니티</div>
-      </div>
-      <div class="project-card">
-        <div class="icon">⚙️</div>
-        <div class="name">백엔드 시스템 / API 개발</div>
+    <div class="section sec-interest">
+      <div class="section-label">01 · Interest</div>
+      <div class="section-title">관심 분야</div>
+      <div class="tags">
+        <span class="tag blue">머신러닝 / 딥러닝</span>
+        <span class="tag blue">웹 개발</span>
+        <span class="tag blue">백엔드</span>
       </div>
     </div>
-  </section>
 
-  <!-- 팀 기여 -->
-  <section>
-    <div class="section-label">04 &nbsp; Contribution</div>
-    <div class="section-title">팀에 대한 기여</div>
-    <div class="contribution">
-      AI 도구를 효율적으로 활용하여 빠른 결과를 도출하고, 명확한 요구사항 정의와 체계적 분석을 통해 팀의 방향성 정립에 기여합니다. 
-	  <br>또한 Python·Java 기반 백엔드 구현 및 기술 문서화를 담당할 수 있습니다.
+    <div class="section sec-lang">
+      <div class="section-label">02 · Language</div>
+      <div class="section-title">주 사용 언어</div>
+      <div class="tags">
+        <span class="tag green">Node.js</span>
+        <span class="tag green">Java</span>
+        <span class="tag green">Python</span>
+      </div>
     </div>
-  </section>
 
+    <div class="section sec-project">
+      <div class="section-label">03 · Project</div>
+      <div class="section-title">희망 프로젝트 주제</div>
+      <div class="project-list">
+        <div class="project-item"><span class="pi">🤖</span>AI / 머신러닝 활용 서비스</div>
+        <div class="project-item"><span class="pi">🎮</span>게임 관련</div>
+        <div class="project-item"><span class="pi">🌐</span>웹 어플리케이션 / 웹 플랫폼</div>
+        <div class="project-item"><span class="pi">⚙️</span>백엔드 시스템 / API 개발</div>
+      </div>
+    </div>
+
+    <div class="section sec-contrib">
+      <div class="section-label">04 · Contribution</div>
+      <div class="section-title">팀에 대한 기여</div>
+      <div class="contribution-text">
+        AI 도구를 효율적으로 활용하여 빠른 결과를 도출하고, 명확한 요구사항 정의와 체계적 분석을 통해 팀의 방향성 정립에 기여합니다.
+		<br>
+		또한 Python·Java 기반 백엔드 구현 및 기술 문서화를 담당할 수 있습니다.
+      </div>
+    </div>
+
+    <div class="section sec-career">
+      <div class="section-label">05 · Career</div>
+      <div class="section-title">경력</div>
+      <div class="career-inner">
+        <div class="career-meta">
+          <div class="career-period">2018 — 2020</div>
+          <div class="career-title">eGovFrame 기반<br>Web Application 개발 및 유지보수</div>
+          <div class="career-domain">주요 분야 · CTI</div>
+        </div>
+        <div class="career-stack">
+          <span class="tag green">Spring (eGovFrame)</span>
+          <span class="tag green">Vue.js 2.x</span>
+          <span class="tag green">C#</span>
+          <span class="tag green">VB 6.0</span>
+          <span class="tag">MySQL</span>
+          <span class="tag">MSSQL</span>
+          <span class="tag">Oracle</span>
+          <span class="tag">Tibero</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 </body>
 </html>
