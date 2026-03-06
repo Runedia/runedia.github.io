@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아키텍처 — PromptCraft</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-all.css" rel="stylesheet" />
+</head>
+<body>
+
+<header class="header">
+  <button class="header__hamburger" aria-label="사이드바 토글">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <a href="index.html" class="header__logo">Prompt<span>Craft</span></a>
+</header>
+
+<div class="sidebar-overlay"></div>
+
+<aside class="sidebar">
+  <div class="sidebar__section">
+    <div class="sidebar__title">페이지</div>
+    <ul class="sidebar__nav">
+      <li><a href="index.html">PRD</a></li>
+      <li><a href="architecture.html">아키텍처</a></li>
+      <li><a href="branch-tree.html">분기 트리 스키마</a></li>
+      <li><a href="db-schema.html">DB 스키마</a></li>
+      <li><a href="api-spec.html">API 명세</a></li>
+    </ul>
+  </div>
+  <div class="sidebar__section">
+    <div class="sidebar__title">현재 페이지</div>
+    <div id="toc"></div>
+  </div>
+</aside>
+
+<main class="content">
+  <h1>아키텍처 설계 <span class="subtitle">PromptCraft</span></h1>
+
+  <hr>
+
+  <h2 id="system-overview">1. 시스템 아키텍처 개요</h2>
+
+  <pre><code>┌──────────────────────────────────────────────────────────┐
+│                      사용자 인터페이스                   │
+│                                                          │
+│   ┌──────────────┐              ┌─────────────────────┐  │
+│   │   CLI        │              │   Web UI (React)    │  │
+│   │  Commander.js│              │   localhost:3000    │  │
+│   │  Inquirer.js │              │                     │  │
+│   └──────┬───────┘              └──────────┬──────────┘  │
+│          │ 직접 호출                       │ HTTP        │
+└──────────┼─────────────────────────────────┼─────────────┘
+           │                                 │
+           ▼                                 ▼
+┌──────────────────────┐      ┌───────────────────────────┐
+│                      │      │   API Server              │
+│                      │◄─────┤   Express (localhost)     │
+│    Core Logic        │      │   REST endpoints          │
+│    (Library)         │      └───────────────────────────┘
+│                      │
+│  ┌────────────────┐  │      ┌───────────────────────────┐
+│  │ Scanner        │  │      │   Data Layer              │
+│  │ QnA Engine     │  │      │   SQLite (better-sqlite3) │
+│  │ Prompt Builder │  │─────►│   ~/.promptcraft/db       │
+│  │ Context Gen    │  │      └───────────────────────────┘
+│  └────────────────┘  │
+│                      │
+└──────────────────────┘</code></pre>
+
+  <h3 id="core-principles">핵심 원칙</h3>
+  <ul>
+    <li><strong>CLI는 Core Logic을 직접 호출</strong>한다. Express 서버를 경유하지 않는다.</li>
+    <li><strong>Web UI는 Express API를 통해</strong> Core Logic에 접근한다.</li>
+    <li><strong>Core Logic은 순수 라이브러리</strong>로, HTTP나 CLI에 대한 의존성이 없다.</li>
+    <li>MVP 단계에서 <strong>Node.js 단일 스택</strong>으로 구현한다.</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="module-structure">2. 모듈 구조</h2>
+
+  <pre><code>promptcraft/
+├── bin/
+│   └── promptcraft.js          # CLI entry point (#!/usr/bin/env node)
+│
+├── src/
+│   ├── core/                   # Core Logic (라이브러리 계층)
+│   │   ├── scanner/
+│   │   │   ├── index.js        # Scanner 진입점
+│   │   │   ├── language.js     # 확장자 기반 언어 감지
+│   │   │   ├── framework.js    # 설정 파일 기반 프레임워크 감지
+│   │   │   └── structure.js    # 디렉토리 트리 생성 (depth 2)
+│   │   │
+│   │   ├── qna/
+│   │   │   ├── index.js        # QnA 엔진 진입점
+│   │   │   ├── engine.js       # 분기 트리 순회 로직
+│   │   │   └── validator.js    # 입력 유효성 검증
+│   │   │
+│   │   ├── prompt/
+│   │   │   ├── index.js        # 프롬프트 빌더 진입점
+│   │   │   ├── builder.js      # 템플릿 조립 로직
+│   │   │   └── templates/      # 프롬프트 템플릿 파일들
+│   │   │
+│   │   ├── context/
+│   │   │   ├── index.js        # 컨텍스트 파일 생성기 진입점
+│   │   │   ├── generator.js    # 포맷별 생성 로직
+│   │   │   └── formats/        # CLAUDE.md, GEMINI.md, .cursorrules 템플릿
+│   │   │
+│   │   └── db/
+│   │       ├── index.js        # DB 접근 계층 진입점
+│   │       ├── connection.js   # SQLite 연결 관리
+│   │       └── repositories/   # 테이블별 CRUD
+│   │           ├── history.js
+│   │           ├── template.js
+│   │           └── config.js
+│   │
+│   ├── cli/                    # CLI 계층
+│   │   ├── index.js            # Commander.js 명령어 정의
+│   │   ├── commands/
+│   │   │   ├── scan.js         # promptcraft scan
+│   │   │   ├── build.js        # promptcraft build (질의응답 → 프롬프트)
+│   │   │   ├── context.js      # promptcraft context
+│   │   │   └── history.js      # promptcraft history
+│   │   └── ui/
+│   │       └── prompts.js      # Inquirer.js 대화형 UI
+│   │
+│   ├── api/                    # API 서버 계층
+│   │   ├── index.js            # Express 앱 설정
+│   │   ├── routes/
+│   │   │   ├── scan.js         # /api/scan
+│   │   │   ├── qna.js          # /api/qna
+│   │   │   ├── prompt.js       # /api/prompt
+│   │   │   ├── context.js      # /api/context
+│   │   │   └── history.js      # /api/history
+│   │   └── middleware/
+│   │       ├── errorHandler.js
+│   │       └── validation.js
+│   │
+│   └── shared/                 # 공유 유틸리티
+│       ├── constants.js        # 상수 정의
+│       ├── errors.js           # 커스텀 에러 클래스
+│       └── utils.js            # 공통 헬퍼
+│
+├── data/
+│   ├── trees/                  # 분기 트리 JSON 정의
+│   │   ├── error-solving.json
+│   │   ├── feature-impl.json
+│   │   ├── code-review.json
+│   │   └── concept-learn.json
+│   └── templates/              # 프롬프트 및 컨텍스트 템플릿
+│       ├── prompt-default.hbs
+│       ├── claude.hbs
+│       ├── gemini.hbs
+│       └── cursorrules.hbs
+│
+├── web/                        # React 웹 UI (별도 빌드)
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│
+├── tests/
+├── package.json
+└── README.md</code></pre>
+
+  <hr>
+
+  <h2 id="layer-responsibilities">3. 계층별 책임</h2>
+
+  <h3 id="core-logic">3.1 Core Logic (<code>src/core/</code>)</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>모듈</th><th>책임</th><th>입력</th><th>출력</th></tr></thead>
+      <tbody>
+        <tr><td>Scanner</td><td>디렉토리 분석</td><td>경로(string)</td><td>ScanResult 객체</td></tr>
+        <tr><td>QnA Engine</td><td>분기 트리 순회, 다음 질문 결정</td><td>트리ID + 현재 응답</td><td>다음 질문 또는 완료 상태</td></tr>
+        <tr><td>Prompt Builder</td><td>수집 데이터 → 프롬프트 조립</td><td>ScanResult + QnA 응답</td><td>완성된 프롬프트(string)</td></tr>
+        <tr><td>Context Generator</td><td>컨텍스트 파일 생성</td><td>ScanResult + 사용자 설정</td><td>파일 내용(string)</td></tr>
+        <tr><td>DB</td><td>데이터 영속화</td><td>CRUD 파라미터</td><td>결과 객체</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="cli-layer">3.2 CLI (<code>src/cli/</code>)</h3>
+  <ul>
+    <li>Commander.js로 명령어 정의</li>
+    <li>Inquirer.js로 대화형 입력 처리</li>
+    <li>Core Logic 모듈을 직접 <code>require()</code>하여 호출</li>
+    <li>출력은 터미널 텍스트 + 클립보드 복사</li>
+  </ul>
+
+  <h3 id="api-layer">3.3 API Server (<code>src/api/</code>)</h3>
+  <ul>
+    <li>Express로 REST API 제공</li>
+    <li>Core Logic을 HTTP로 래핑하는 역할만 수행</li>
+    <li>자체 비즈니스 로직 없음</li>
+    <li>Web UI 정적 파일 서빙 (<code>web/build/</code>)</li>
+  </ul>
+
+  <h3 id="web-layer">3.4 Web UI (<code>web/</code>)</h3>
+  <ul>
+    <li>React SPA</li>
+    <li>API Server에 HTTP 요청</li>
+    <li>독립적으로 빌드 (<code>npm run build</code> → <code>web/build/</code>)</li>
+    <li>Express가 빌드 결과물을 정적 파일로 서빙</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="data-flow">4. 데이터 흐름</h2>
+
+  <h3 id="flow-cli">4.1 프롬프트 생성 (CLI)</h3>
+  <pre><code>사용자 → CLI(scan 명령) → Scanner.scan(path)
+                              │
+                              ▼
+                         ScanResult 반환
+                              │
+사용자 → CLI(build 명령) → QnA Engine.start(treeId)
+                              │
+                         ┌────┴────┐
+                         │ 질문 루프 │ ← 사용자 응답 반복
+                         └────┬────┘
+                              │
+                         QnA 완료 (answers 객체)
+                              │
+                              ▼
+                     Prompt Builder.build(scanResult, answers)
+                              │
+                              ▼
+                     완성된 프롬프트 → 클립보드 복사 + DB 저장</code></pre>
+
+  <h3 id="flow-web">4.2 프롬프트 생성 (Web UI)</h3>
+  <pre><code>React UI → POST /api/scan { path }
+              → Scanner.scan(path)
+              → 200 { scanResult }
+
+React UI → POST /api/qna/start { treeId }
+              → QnA Engine.start(treeId)
+              → 200 { firstQuestion }
+
+React UI → POST /api/qna/answer { sessionId, answer }
+              → QnA Engine.next(sessionId, answer)
+              → 200 { nextQuestion | completed: true, answers }
+
+React UI → POST /api/prompt/build { scanResult, answers }
+              → Prompt Builder.build(scanResult, answers)
+              → 200 { prompt }</code></pre>
+
+  <hr>
+
+  <h2 id="data-structures">5. 주요 데이터 구조</h2>
+
+  <h3 id="scan-result">ScanResult</h3>
+  <pre><code class="language-json">{
+  "path": "/home/user/my-project",
+  "languages": [
+    { "name": "JavaScript", "extension": ".js", "count": 45, "percentage": 62.5 },
+    { "name": "TypeScript", "extension": ".ts", "count": 20, "percentage": 27.8 }
+  ],
+  "frameworks": [
+    { "name": "Express", "version": "4.18.2", "source": "package.json" },
+    { "name": "React", "version": "18.2.0", "source": "package.json" }
+  ],
+  "structure": {
+    "name": "my-project",
+    "children": [
+      { "name": "src", "children": ["components", "utils", "pages"] },
+      { "name": "tests", "children": ["unit", "integration"] }
+    ]
+  },
+  "packageManager": "npm",
+  "hasEnv": true,
+  "configFiles": ["package.json", ".eslintrc.js", "tsconfig.json"],
+  "scannedAt": "2026-03-06T12:00:00Z"
+}</code></pre>
+
+  <h3 id="qna-session">QnA Session State</h3>
+  <pre><code class="language-json">{
+  "sessionId": "uuid-v4",
+  "treeId": "error-solving",
+  "currentNodeId": "error-message",
+  "answers": {
+    "situation": "error-solving",
+    "language": "JavaScript",
+    "errorMessage": "TypeError: Cannot read property...",
+    "triedMethods": "console.log로 확인해봤으나..."
+  },
+  "completed": false
+}</code></pre>
+
+  <hr>
+
+  <h2 id="tech-stack-detail">6. 기술 스택 상세</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>영역</th><th>라이브러리</th><th>버전</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td>CLI</td><td>commander</td><td>^12.x</td><td>명령어 파싱</td></tr>
+        <tr><td>CLI</td><td>inquirer</td><td>^9.x</td><td>대화형 입력</td></tr>
+        <tr><td>CLI</td><td>clipboardy</td><td>^4.x</td><td>클립보드 복사</td></tr>
+        <tr><td>CLI</td><td>chalk</td><td>^5.x</td><td>터미널 색상</td></tr>
+        <tr><td>Core</td><td>better-sqlite3</td><td>^11.x</td><td>SQLite 접근</td></tr>
+        <tr><td>Core</td><td>handlebars</td><td>^4.x</td><td>템플릿 엔진</td></tr>
+        <tr><td>Core</td><td>glob</td><td>^10.x</td><td>파일 패턴 매칭</td></tr>
+        <tr><td>Core</td><td>uuid</td><td>^9.x</td><td>세션 ID 생성</td></tr>
+        <tr><td>API</td><td>express</td><td>^4.x</td><td>HTTP 서버</td></tr>
+        <tr><td>API</td><td>cors</td><td>^2.x</td><td>CORS 처리</td></tr>
+        <tr><td>Web</td><td>react</td><td>^18.x</td><td>UI 프레임워크</td></tr>
+        <tr><td>Web</td><td>vite</td><td>^5.x</td><td>빌드 도구</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="deployment">7. 배포 구조</h2>
+  <pre><code class="language-bash">npm install -g promptcraft
+    │
+    ├── promptcraft scan [path]       # CLI 직접 사용
+    ├── promptcraft build             # 대화형 프롬프트 빌드
+    ├── promptcraft context [path]    # 컨텍스트 파일 생성
+    ├── promptcraft history           # 히스토리 조회
+    └── promptcraft serve             # 웹 UI 서버 시작 (localhost:3000)</code></pre>
+
+  <ul>
+    <li><code>~/.promptcraft/</code> 디렉토리에 DB, 설정, 커스텀 트리 저장</li>
+    <li><code>promptcraft serve</code> 실행 시 Express + 빌드된 React 정적 파일 서빙</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="role-scope">8. 역할별 작업 범위</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>담당</th><th>작업 범위</th><th>의존성</th></tr></thead>
+      <tbody>
+        <tr><td>분기 질의응답 + 프롬프트 조립</td><td><code>src/core/qna/</code>, <code>src/core/prompt/</code>, <code>data/trees/</code>, <code>data/templates/</code></td><td>없음 (독립 작업 가능)</td></tr>
+        <tr><td>프로젝트 스캔 + 컨텍스트 생성</td><td><code>src/core/scanner/</code>, <code>src/core/context/</code></td><td>없음 (독립 작업 가능)</td></tr>
+        <tr><td>API + DB + CLI</td><td><code>src/cli/</code>, <code>src/api/</code>, <code>src/core/db/</code>, <code>bin/</code></td><td>Core 모듈 인터페이스 확정 후</td></tr>
+        <tr><td>웹 UI</td><td><code>web/</code></td><td>API 명세 확정 후</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>PromptCraft 문서</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="js/main.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

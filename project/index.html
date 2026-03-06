@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRD — PromptCraft</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-all.css" rel="stylesheet" />
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <button class="header__hamburger" aria-label="사이드바 토글">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <a href="index.html" class="header__logo">Prompt<span>Craft</span></a>
+</header>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar__section">
+    <div class="sidebar__title">페이지</div>
+    <ul class="sidebar__nav">
+      <li><a href="index.html">PRD</a></li>
+      <li><a href="architecture.html">아키텍처</a></li>
+      <li><a href="branch-tree.html">분기 트리 스키마</a></li>
+      <li><a href="db-schema.html">DB 스키마</a></li>
+      <li><a href="api-spec.html">API 명세</a></li>
+    </ul>
+  </div>
+  <div class="sidebar__section">
+    <div class="sidebar__title">현재 페이지</div>
+    <div id="toc"></div>
+  </div>
+</aside>
+
+<!-- Content -->
+<main class="content">
+  <h1>PRD &mdash; PromptCraft <span class="subtitle">로컬 설치형 코딩 프롬프트 빌더</span></h1>
+
+  <hr>
+
+  <h2 id="overview">1. 개요</h2>
+
+  <h3 id="background">1.1 배경</h3>
+  <p>AI 코딩 도구(Claude, Gemini, ChatGPT 등)의 응답 품질은 프롬프트 품질에 직결된다. 그러나 대부분의 개발자는 모호하고 불완전한 질문을 입력하여 재질문 반복, 토큰 낭비, 엉뚱한 답변이라는 문제를 겪는다. 특히 초보 개발자일수록 "무엇을 어떻게 설명해야 하는가"를 모른다.</p>
+  <p>Claude Code의 SKILL.md처럼, AI 도구에 프로젝트 컨텍스트와 행동 지침을 사전 주입하는 파일이 존재하지만 이를 직접 작성하려면 AI 도구에 대한 깊은 이해가 필요하다. PromptCraft는 이 과정을 자동화한다.</p>
+
+  <h3 id="product-definition">1.2 제품 정의</h3>
+  <p>PromptCraft는 로컬 코드베이스를 분석하고, 질의응답을 통해 사용자의 의도를 구조화하여 <strong>완성형 코딩 프롬프트</strong>를 생성하는 로컬 설치형 도구다. CLI와 웹 UI를 모두 지원하며, AI 도구별 컨텍스트 파일(CLAUDE.md, GEMINI.md, .cursorrules 등)도 자동 생성한다.</p>
+  <p><strong>핵심 설계 철학: 규칙 기반 우선, AI는 선택적 확장</strong></p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>구분</th><th>방식</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>분기 질의응답</td><td>규칙 기반</td><td>JSON으로 사전 정의된 분기 트리</td></tr>
+        <tr><td>프롬프트 조립</td><td>규칙 기반</td><td>수집된 값을 템플릿에 채우는 방식</td></tr>
+        <tr><td>파일 스캔 / 언어 감지</td><td>규칙 기반</td><td>확장자·설정파일 파싱</td></tr>
+        <tr><td>컨텍스트 파일 생성</td><td>규칙 기반</td><td>스캔 결과 → 템플릿 매핑</td></tr>
+        <tr><td>프롬프트 자연어 다듬기</td><td>선택적 AI</td><td>외부 API 또는 로컬 LLM 연결 시 활성화</td></tr>
+        <tr><td>품질 스코어링 고도화</td><td>선택적 AI</td><td>API Key 미입력 시 규칙 기반 스코어링으로 대체</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <blockquote><p>API Key 미입력 시에도 모든 핵심 기능이 완전히 동작한다.</p></blockquote>
+
+  <h3 id="comparison">1.3 Claude Skills와의 비교</h3>
+  <pre><code>[Claude Code - SKILL.md]          [PromptCraft]
+특정 AI 도구 전용          vs     AI 도구 무관, 범용
+사람이 직접 작성           vs     자동 생성
+단일 포맷                  vs     도구별 포맷 동시 생성</code></pre>
+
+  <p>PromptCraft는 Claude Skills의 로컬 대체제이자, 이를 자동으로 만들어주는 생성 도구다. 동일한 프로젝트 스캔 결과로 여러 AI 도구에 맞는 포맷을 각각 출력한다.</p>
+
+  <pre><code>PromptCraft 출력
+├─ CLAUDE.md        → Claude / Claude Code용
+├─ GEMINI.md        → Gemini용
+└─ prompt.txt       → 범용 복사용</code></pre>
+
+  <h3 id="goals">1.4 목표</h3>
+  <ul>
+    <li>첫 질문에 원하는 답을 얻는 성공률 향상</li>
+    <li>불필요한 재질문으로 인한 토큰 낭비 최소화</li>
+    <li>프로젝트 컨텍스트를 매번 수동 입력하는 반복 작업 제거</li>
+    <li>특정 AI 도구에 종속되지 않는 범용 컨텍스트 파일 생성</li>
+  </ul>
+
+  <h3 id="project-info">1.5 프로젝트 정보</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>팀 구성</td><td>최대 4인</td></tr>
+        <tr><td>개발 기간</td><td>3 ~ 4개월</td></tr>
+        <tr><td>유형</td><td>대학교 졸업과제</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="users">2. 사용자 정의</h2>
+
+  <h3 id="target-users">2.1 타겟 사용자</h3>
+  <p><strong>Primary</strong> &mdash; AI 코딩 도구를 자주 사용하는 개발자 (학생 ~ 주니어)</p>
+  <ul>
+    <li>AI에게 질문을 잘 구성하지 못해 비효율적인 대화를 반복하는 사람</li>
+    <li>매번 프로젝트 구조를 AI에게 다시 설명하는 것이 번거로운 사람</li>
+  </ul>
+  <p><strong>Secondary</strong> &mdash; AI 도구를 처음 사용하는 비개발 직군</p>
+  <ul>
+    <li>코딩 관련 질문은 아니지만 구조화된 질문 작성이 필요한 사람</li>
+  </ul>
+
+  <h3 id="scenario">2.2 핵심 사용자 시나리오</h3>
+  <blockquote><p>김철수(대학생)는 Node.js 프로젝트에서 에러를 만났다. 평소처럼 ChatGPT에 "이거 왜 안 돼요?"라고 물으면 엉뚱한 답변이 온다. PromptCraft를 실행하면 프로젝트를 자동 스캔하고, 몇 가지 질문을 통해 에러 메시지, 시도한 방법, 원하는 결과를 수집한다. 완성된 프롬프트를 복사해 AI에 붙여넣으면 정확한 답변이 바로 돌아온다.</p></blockquote>
+
+  <hr>
+
+  <h2 id="requirements">3. 기능 요구사항</h2>
+
+  <h3 id="feature-list">3.1 기능 목록 및 우선순위</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>기능</th><th>설명</th><th>구현 방식</th><th>우선순위</th></tr></thead>
+      <tbody>
+        <tr><td>프로젝트 스캔</td><td>로컬 디렉토리 분석, 언어·프레임워크·구조 파악</td><td>규칙 기반</td><td>P0</td></tr>
+        <tr><td>분기 질의응답 엔진</td><td>상황에 따른 질문 흐름으로 의도 구조화</td><td>규칙 기반</td><td>P0</td></tr>
+        <tr><td>완성형 프롬프트 생성</td><td>수집 정보를 템플릿에 조립하여 출력</td><td>규칙 기반</td><td>P0</td></tr>
+        <tr><td>컨텍스트 파일 생성</td><td>CLAUDE.md, GEMINI.md, .cursorrules 자동 생성</td><td>규칙 기반</td><td>P0</td></tr>
+        <tr><td>CLI 인터페이스</td><td>터미널에서 전체 기능 사용 가능</td><td>-</td><td>P0</td></tr>
+        <tr><td>웹 UI (로컬 서버)</td><td>localhost에서 실행되는 웹 기반 인터페이스</td><td>-</td><td>P1</td></tr>
+        <tr><td>프롬프트 히스토리</td><td>생성한 프롬프트 저장 및 재사용</td><td>-</td><td>P1</td></tr>
+        <tr><td>프롬프트 템플릿 관리</td><td>자주 쓰는 패턴 저장 및 불러오기</td><td>-</td><td>P1</td></tr>
+        <tr><td>프롬프트 품질 스코어링</td><td>구체성·맥락·제약조건 기준 품질 점수</td><td>규칙 기반 (AI 선택)</td><td>P2</td></tr>
+        <tr><td>선택적 AI 연결</td><td>외부 API 또는 Ollama 로컬 LLM 연결</td><td>선택적 확장</td><td>P2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <blockquote><p>P0: MVP 필수 / P1: 2차 개발 / P2: 시간 여유 시</p></blockquote>
+
+  <hr>
+
+  <h3 id="feature-details">3.2 핵심 기능 상세</h3>
+
+  <h4 id="project-scan">3.2.1 프로젝트 스캔</h4>
+  <ul>
+    <li>지정한 디렉토리를 탐색하여 아래 정보를 자동 수집
+      <ul>
+        <li>주요 언어 (확장자 빈도 기반)</li>
+        <li>프레임워크 / 라이브러리 (package.json, pom.xml, requirements.txt 등)</li>
+        <li>디렉토리 구조 (depth 2 수준)</li>
+        <li>.env 존재 여부 (내용 미포함)</li>
+      </ul>
+    </li>
+    <li>스캔 결과는 세션 내 컨텍스트로 유지되어 프롬프트에 자동 삽입</li>
+  </ul>
+
+  <h4 id="qna-engine">3.2.2 분기 질의응답 엔진</h4>
+  <p>사용자가 선택한 상황 유형에 따라 질문 흐름이 분기된다. 분기 트리는 JSON으로 정의되며 커스텀 추가가 가능하다.</p>
+  <pre><code>[상황 선택]
+├─ 에러 해결
+│   ├─ 사용 언어 / 버전
+│   ├─ 에러 메시지 (코드 스니펫 직접 입력 가능)
+│   ├─ 시도한 방법
+│   └─ 원하는 동작
+├─ 기능 구현
+│   ├─ 구현하려는 기능 설명
+│   ├─ 현재 코드 있음 여부
+│   ├─ 참고 코드 / 예시
+│   └─ 제약 조건 (성능, 라이브러리 제한 등)
+├─ 코드 리뷰
+│   ├─ 리뷰 포인트 (성능 / 보안 / 가독성 / 전체)
+│   └─ 코드 스니펫 입력
+└─ 개념 이해
+    ├─ 현재 이해 수준
+    ├─ 비유 선호 여부
+    └─ 관련 코드 있음 여부</code></pre>
+
+  <h4 id="prompt-generation">3.2.3 완성형 프롬프트 생성</h4>
+  <p>질의응답 완료 후 아래 구조로 프롬프트를 자동 조립한다.</p>
+  <pre><code>## 프로젝트 컨텍스트
+- Stack: Node.js 20, Express 4.x, PostgreSQL
+- 디렉토리 구조: (스캔 결과 자동 삽입)
+
+## 상황
+에러 해결
+
+## 문제 설명
+(사용자 입력 내용)
+
+## 에러 메시지
+(코드 스니펫 자동 포함)
+
+## 시도한 방법
+(사용자 입력 내용)
+
+## 원하는 결과
+(사용자 입력 내용)
+
+## 제약 조건
+(있는 경우만 포함)</code></pre>
+
+  <h4 id="context-file">3.2.4 컨텍스트 파일 생성</h4>
+  <ul>
+    <li>프로젝트 스캔 결과 + 사용자 추가 입력(코드 컨벤션, 금지 라이브러리 등)을 바탕으로 생성</li>
+    <li>대상 AI 도구를 선택하면 해당 포맷에 맞게 출력</li>
+    <li>프로젝트 루트에 파일 저장, 재생성 시 기존 파일 diff 비교 후 업데이트 여부 확인</li>
+  </ul>
+  <pre><code class="language-markdown"># CLAUDE.md 생성 예시
+
+## Project Overview
+- Stack: Node.js 20, Express, PostgreSQL
+- Architecture: REST API, MVC pattern
+- Package Manager: npm
+
+## Conventions
+- ESLint: airbnb
+- Async pattern: async/await only (no callbacks)
+- Test framework: Jest
+
+## Constraints
+- Do not use deprecated APIs
+- All DB queries must use parameterized statements</code></pre>
+
+  <h4 id="ai-connection">3.2.5 선택적 AI 연결 (P2)</h4>
+  <p>핵심 기능은 규칙 기반으로 동작하며, AI 연결은 선택적 확장이다.</p>
+  <pre><code>[사용자 설정]
+├─ API Key 입력 시  → 외부 LLM으로 프롬프트 자연어 다듬기 활성화
+├─ Ollama 감지 시   → 로컬 LLM으로 오프라인 AI 기능 활성화
+└─ 미설정 시        → 규칙 기반으로만 동작 (모든 핵심 기능 정상 동작)</code></pre>
+
+  <hr>
+
+  <h2 id="nfr">4. 비기능 요구사항</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>항목</th><th>요구사항</th></tr></thead>
+      <tbody>
+        <tr><td>실행 환경</td><td>Windows (Node.js 18+ 필요)</td></tr>
+        <tr><td>설치 방식</td><td>npm install -g 또는 로컬 클론 후 실행</td></tr>
+        <tr><td>외부 의존성</td><td>인터넷 연결 불필요 (선택적 AI 기능 제외)</td></tr>
+        <tr><td>데이터 저장</td><td>로컬 SQLite (별도 DB 설치 불필요)</td></tr>
+        <tr><td>응답 속도</td><td>프롬프트 생성 3초 이내, 프로젝트 스캔 5초 이내</td></tr>
+        <tr><td>보안</td><td>.env 파일 내용 미수집, API Key 로컬 저장 시 암호화</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="tech-stack">5. 기술 스택</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>영역</th><th>기술</th><th>담당</th></tr></thead>
+      <tbody>
+        <tr><td>CLI 인터페이스</td><td>Node.js (Commander.js)</td><td>백엔드</td></tr>
+        <tr><td>로컬 API 서버</td><td>Node.js (Express)</td><td>백엔드</td></tr>
+        <tr><td>파일 스캔 / 파싱</td><td>Python</td><td>분석</td></tr>
+        <tr><td>품질 스코어링</td><td>Python (규칙 기반 + 선택적 ML)</td><td>분석</td></tr>
+        <tr><td>웹 UI</td><td>React</td><td>프론트엔드</td></tr>
+        <tr><td>로컬 데이터 저장</td><td>SQLite</td><td>백엔드</td></tr>
+        <tr><td>분기 질문 흐름</td><td>Node.js + JSON 트리 정의</td><td>백엔드</td></tr>
+        <tr><td>선택적 AI 연결</td><td>Anthropic SDK / Google SDK / Ollama</td><td>확장</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="roles">6. 역할 분담</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>인원</th><th>담당 영역</th></tr></thead>
+      <tbody>
+        <tr><td>1인</td><td>분기 질의응답 엔진 + 프롬프트 조립 로직 (Node.js)</td></tr>
+        <tr><td>1인</td><td>프로젝트 파일 스캔 + 품질 스코어링 (Python)</td></tr>
+        <tr><td>1인</td><td>API 서버 + DB 설계 + CLI (Node.js / SQLite)</td></tr>
+        <tr><td>1인</td><td>웹 UI / UX (React)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="timeline">7. 개발 타임라인</h2>
+
+  <h3 id="timeline-4m">4개월 기준</h3>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>기간</th><th>마일스톤</th><th>주요 작업</th></tr></thead>
+      <tbody>
+        <tr><td>1개월차</td><td>설계 완료</td><td>요구사항 확정, 분기 트리 JSON 설계, DB 스키마, 개발 환경 구축</td></tr>
+        <tr><td>2개월차</td><td>핵심 기능 개발</td><td>스캔 엔진, 질의응답 엔진, 프롬프트 생성, CLI MVP</td></tr>
+        <tr><td>3개월차</td><td>통합 + 2차 기능</td><td>웹 UI 연동, 히스토리, 템플릿, 컨텍스트 파일 생성, 내부 테스트</td></tr>
+        <tr><td>4개월차</td><td>완성 + 발표 준비</td><td>버그 수정, 스코어링, 선택적 AI 연결, 데모 준비, 발표 자료</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="timeline-3m">3개월 기준 (단축 시)</h3>
+  <ul>
+    <li>품질 스코어링 및 선택적 AI 연결(P2) 제외</li>
+    <li>웹 UI는 기본 수준으로 범위 축소</li>
+    <li>P0 기능 완성도에 집중</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="mvp">8. MVP 범위 정의</h2>
+
+  <h3>포함</h3>
+  <ul>
+    <li>프로젝트 디렉토리 스캔 (언어, 프레임워크, 구조)</li>
+    <li>4가지 상황 분기 질의응답 (에러 해결, 기능 구현, 코드 리뷰, 개념 이해)</li>
+    <li>완성형 프롬프트 생성 및 클립보드 복사</li>
+    <li>CLAUDE.md / GEMINI.md / .cursorrules 자동 생성</li>
+    <li>생성 프롬프트 로컬 저장 및 히스토리 조회</li>
+    <li>CLI 인터페이스</li>
+    <li>웹 UI (localhost:3000)</li>
+  </ul>
+
+  <h3>제외 (MVP 이후)</h3>
+  <ul>
+    <li>프롬프트 품질 스코어링</li>
+    <li>선택적 AI 연결 (외부 API / Ollama)</li>
+    <li>커뮤니티 공유 / 검색</li>
+    <li>다국어 지원</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="success">9. 성공 지표</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>지표</th><th>목표</th></tr></thead>
+      <tbody>
+        <tr><td>프롬프트 생성 소요 시간</td><td>수동 작성 대비 50% 이상 단축</td></tr>
+        <tr><td>사용자 테스트 만족도</td><td>5점 만점 기준 4점 이상</td></tr>
+        <tr><td>재질문 횟수 감소</td><td>기존 대비 평균 1회 이하 감소</td></tr>
+        <tr><td>컨텍스트 파일 생성 정확도</td><td>수동 검토 기준 90% 이상 정확</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="glossary">10. 용어 정의</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>용어</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>프롬프트</td><td>AI에게 입력하는 질문 또는 지시문</td></tr>
+        <tr><td>분기 트리</td><td>사용자 답변에 따라 다음 질문이 달라지는 질문 흐름 구조</td></tr>
+        <tr><td>컨텍스트 파일</td><td>CLAUDE.md, GEMINI.md 등 AI가 프로젝트를 이해하도록 작성하는 문서</td></tr>
+        <tr><td>규칙 기반</td><td>AI 없이 사전 정의된 로직과 템플릿으로 동작하는 방식</td></tr>
+        <tr><td>선택적 AI</td><td>API Key 또는 로컬 LLM 설정 시에만 활성화되는 보조 기능</td></tr>
+        <tr><td>토큰</td><td>AI API 사용 시 과금 단위, 입력+출력 텍스트 길이에 비례</td></tr>
+        <tr><td>Ollama</td><td>로컬 환경에서 LLM을 실행할 수 있는 오픈소스 도구</td></tr>
+        <tr><td>MVP</td><td>Minimum Viable Product, 핵심 기능만 포함한 최소 작동 버전</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notice">
+    <p>상기 내용은 회의를 통해 변경될 수 있습니다.</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>PromptCraft 문서</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="js/main.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

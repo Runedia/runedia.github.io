@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DB 스키마 — PromptCraft</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-all.css" rel="stylesheet" />
+</head>
+<body>
+
+<header class="header">
+  <button class="header__hamburger" aria-label="사이드바 토글">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <a href="index.html" class="header__logo">Prompt<span>Craft</span></a>
+</header>
+
+<div class="sidebar-overlay"></div>
+
+<aside class="sidebar">
+  <div class="sidebar__section">
+    <div class="sidebar__title">페이지</div>
+    <ul class="sidebar__nav">
+      <li><a href="index.html">PRD</a></li>
+      <li><a href="architecture.html">아키텍처</a></li>
+      <li><a href="branch-tree.html">분기 트리 스키마</a></li>
+      <li><a href="db-schema.html">DB 스키마</a></li>
+      <li><a href="api-spec.html">API 명세</a></li>
+    </ul>
+  </div>
+  <div class="sidebar__section">
+    <div class="sidebar__title">현재 페이지</div>
+    <div id="toc"></div>
+  </div>
+</aside>
+
+<main class="content">
+  <h1>DB 스키마 <span class="subtitle">PromptCraft</span></h1>
+
+  <hr>
+
+  <h2 id="overview">1. 개요</h2>
+  <ul>
+    <li><strong>DB 엔진</strong>: SQLite (better-sqlite3)</li>
+    <li><strong>파일 위치</strong>: <code>~/.promptcraft/promptcraft.db</code></li>
+    <li><strong>마이그레이션</strong>: 버전 기반 순차 마이그레이션 (<code>src/core/db/migrations/</code>)</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="table-design">2. 테이블 설계</h2>
+
+  <h3 id="prompt-history">2.1 prompt_history — 생성된 프롬프트 히스토리</h3>
+  <pre><code class="language-sql">CREATE TABLE prompt_history (
+    id          TEXT PRIMARY KEY,              -- UUID v4
+    tree_id     TEXT NOT NULL,                 -- 사용된 분기 트리 ID
+    scan_path   TEXT,                          -- 스캔한 프로젝트 경로
+    scan_result TEXT,                          -- ScanResult JSON
+    answers     TEXT NOT NULL,                 -- QnA 응답 JSON
+    prompt      TEXT NOT NULL,                 -- 최종 생성된 프롬프트
+    tags        TEXT,                          -- 사용자 태그 (JSON 배열)
+    created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX idx_history_tree_id ON prompt_history(tree_id);
+CREATE INDEX idx_history_created_at ON prompt_history(created_at);</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>TEXT (UUID)</td><td>고유 식별자</td></tr>
+        <tr><td>tree_id</td><td>TEXT</td><td>어떤 분기 트리로 생성했는지</td></tr>
+        <tr><td>scan_path</td><td>TEXT</td><td>스캔 대상 경로 (없으면 NULL)</td></tr>
+        <tr><td>scan_result</td><td>TEXT (JSON)</td><td>스캔 결과 전체를 JSON으로 저장</td></tr>
+        <tr><td>answers</td><td>TEXT (JSON)</td><td>질의응답 응답 전체를 JSON으로 저장</td></tr>
+        <tr><td>prompt</td><td>TEXT</td><td>최종 조립된 프롬프트 원문</td></tr>
+        <tr><td>tags</td><td>TEXT (JSON)</td><td>사용자가 붙인 태그 <code>["auth", "error"]</code></td></tr>
+        <tr><td>created_at</td><td>TEXT</td><td>생성 시각</td></tr>
+        <tr><td>updated_at</td><td>TEXT</td><td>수정 시각</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="prompt-template">2.2 prompt_template — 사용자 저장 템플릿</h3>
+  <pre><code class="language-sql">CREATE TABLE prompt_template (
+    id          TEXT PRIMARY KEY,              -- UUID v4
+    name        TEXT NOT NULL UNIQUE,          -- 템플릿 이름
+    description TEXT,                          -- 설명
+    tree_id     TEXT,                          -- 연관 트리 ID (없으면 범용)
+    content     TEXT NOT NULL,                 -- 템플릿 내용 (Handlebars)
+    is_default  INTEGER NOT NULL DEFAULT 0,   -- 기본 템플릿 여부
+    created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE UNIQUE INDEX idx_template_name ON prompt_template(name);</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>TEXT (UUID)</td><td>고유 식별자</td></tr>
+        <tr><td>name</td><td>TEXT</td><td>템플릿 이름 (고유)</td></tr>
+        <tr><td>description</td><td>TEXT</td><td>템플릿 설명</td></tr>
+        <tr><td>tree_id</td><td>TEXT</td><td>특정 트리 전용이면 해당 트리 ID, 범용이면 NULL</td></tr>
+        <tr><td>content</td><td>TEXT</td><td>Handlebars 템플릿 본문</td></tr>
+        <tr><td>is_default</td><td>INTEGER</td><td>1이면 해당 tree_id의 기본 템플릿</td></tr>
+        <tr><td>created_at</td><td>TEXT</td><td>생성 시각</td></tr>
+        <tr><td>updated_at</td><td>TEXT</td><td>수정 시각</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="scan-cache">2.3 scan_cache — 스캔 결과 캐시</h3>
+  <pre><code class="language-sql">CREATE TABLE scan_cache (
+    path        TEXT PRIMARY KEY,              -- 스캔 경로 (정규화된 절대 경로)
+    result      TEXT NOT NULL,                 -- ScanResult JSON
+    file_hash   TEXT NOT NULL,                 -- 디렉토리 상태 해시 (변경 감지)
+    scanned_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>path</td><td>TEXT</td><td>스캔 대상 절대 경로 (PK)</td></tr>
+        <tr><td>result</td><td>TEXT (JSON)</td><td>캐시된 ScanResult</td></tr>
+        <tr><td>file_hash</td><td>TEXT</td><td>파일 목록 + mtime 기반 해시. 변경 시 재스캔</td></tr>
+        <tr><td>scanned_at</td><td>TEXT</td><td>스캔 시각</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="config">2.4 config — 사용자 설정</h3>
+  <pre><code class="language-sql">CREATE TABLE config (
+    key         TEXT PRIMARY KEY,              -- 설정 키
+    value       TEXT NOT NULL,                 -- 설정 값 (JSON 또는 단순 문자열)
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>key</td><td>TEXT</td><td>설정 키 (PK)</td></tr>
+        <tr><td>value</td><td>TEXT</td><td>설정 값</td></tr>
+        <tr><td>updated_at</td><td>TEXT</td><td>마지막 수정 시각</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4 id="config-keys">주요 설정 키</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>key</th><th>예시 value</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>ai.provider</code></td><td><code>"anthropic"</code></td><td>AI 연결 제공자</td></tr>
+        <tr><td><code>ai.apiKey</code></td><td><code>"encrypted:..."</code></td><td>암호화된 API Key</td></tr>
+        <tr><td><code>ai.ollamaUrl</code></td><td><code>"http://localhost:11434"</code></td><td>Ollama 서버 URL</td></tr>
+        <tr><td><code>ai.model</code></td><td><code>"claude-sonnet-4-6"</code></td><td>사용할 모델</td></tr>
+        <tr><td><code>output.defaultFormat</code></td><td><code>"claude"</code></td><td>기본 컨텍스트 파일 포맷</td></tr>
+        <tr><td><code>output.copyToClipboard</code></td><td><code>"true"</code></td><td>자동 클립보드 복사 여부</td></tr>
+        <tr><td><code>scan.maxDepth</code></td><td><code>"2"</code></td><td>디렉토리 스캔 깊이</td></tr>
+        <tr><td><code>scan.ignorePatterns</code></td><td><code>'["node_modules","dist",".git"]'</code></td><td>스캔 제외 패턴</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="er-diagram">3. ER 다이어그램</h2>
+  <pre><code>┌─────────────────────┐
+│   prompt_history    │
+├─────────────────────┤
+│ id (PK)             │
+│ tree_id ─────────────────► 분기 트리 JSON의 treeId
+│ scan_path            │
+│ scan_result (JSON)   │
+│ answers (JSON)       │
+│ prompt               │
+│ tags (JSON)          │
+│ created_at           │
+│ updated_at           │
+└─────────────────────┘
+
+┌─────────────────────┐
+│   prompt_template   │
+├─────────────────────┤
+│ id (PK)             │
+│ name (UNIQUE)        │
+│ description          │
+│ tree_id ─────────────────► 분기 트리 JSON의 treeId (nullable)
+│ content              │
+│ is_default           │
+│ created_at           │
+│ updated_at           │
+└─────────────────────┘
+
+┌─────────────────────┐
+│   scan_cache        │
+├─────────────────────┤
+│ path (PK)            │
+│ result (JSON)        │
+│ file_hash            │
+│ scanned_at           │
+└─────────────────────┘
+
+┌─────────────────────┐
+│   config            │
+├─────────────────────┤
+│ key (PK)             │
+│ value                │
+│ updated_at           │
+└─────────────────────┘</code></pre>
+
+  <ul>
+    <li>테이블 간 FK는 설정하지 않는다. <code>tree_id</code>는 JSON 파일의 <code>treeId</code>를 참조하는 논리적 관계.</li>
+    <li>SQLite의 경량성을 유지하기 위해 정규화보다 JSON 컬럼을 활용.</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="migration">4. 마이그레이션 전략</h2>
+  <pre><code>src/core/db/migrations/
+├── 001_initial.sql         # 최초 테이블 생성
+├── 002_add_tags.sql        # 예시: tags 컬럼 추가
+└── ...</code></pre>
+
+  <ul>
+    <li>DB 파일에 <code>PRAGMA user_version</code>으로 현재 버전 기록</li>
+    <li>앱 시작 시 현재 버전과 마이그레이션 파일 비교, 미적용 마이그레이션 순차 실행</li>
+    <li>각 마이그레이션 파일은 트랜잭션으로 감싸서 실행</li>
+  </ul>
+
+  <pre><code class="language-javascript">// 마이그레이션 실행 로직 (의사 코드)
+const currentVersion = db.pragma('user_version', { simple: true });
+const migrations = loadMigrations(); // 001, 002, ...
+
+for (const migration of migrations) {
+  if (migration.version > currentVersion) {
+    db.transaction(() => {
+      db.exec(migration.sql);
+      db.pragma(`user_version = ${migration.version}`);
+    })();
+  }
+}</code></pre>
+
+  <hr>
+
+  <h2 id="query-examples">5. 쿼리 예시</h2>
+
+  <h3 id="query-history-list">히스토리 목록 조회 (최신순, 페이지네이션)</h3>
+  <pre><code class="language-sql">SELECT id, tree_id, scan_path, tags, created_at
+FROM prompt_history
+ORDER BY created_at DESC
+LIMIT ? OFFSET ?;</code></pre>
+
+  <h3 id="query-history-search">히스토리 검색 (프롬프트 내용 기반)</h3>
+  <pre><code class="language-sql">SELECT id, tree_id, prompt, created_at
+FROM prompt_history
+WHERE prompt LIKE '%' || ? || '%'
+ORDER BY created_at DESC
+LIMIT 20;</code></pre>
+
+  <h3 id="query-scan-cache">스캔 캐시 조회 (변경 감지)</h3>
+  <pre><code class="language-sql">SELECT result, file_hash
+FROM scan_cache
+WHERE path = ?;</code></pre>
+
+  <h3 id="query-config">설정 읽기/쓰기</h3>
+  <pre><code class="language-sql">-- 읽기
+SELECT value FROM config WHERE key = ?;
+
+-- 쓰기 (upsert)
+INSERT INTO config (key, value, updated_at)
+VALUES (?, ?, datetime('now', 'localtime'))
+ON CONFLICT(key) DO UPDATE SET
+    value = excluded.value,
+    updated_at = excluded.updated_at;</code></pre>
+</main>
+
+<footer class="footer">
+  <p>PromptCraft 문서</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+<script src="js/main.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

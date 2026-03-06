@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 명세 — PromptCraft</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/wan2land/d2coding/d2coding-all.css" rel="stylesheet" />
+</head>
+<body>
+
+<header class="header">
+  <button class="header__hamburger" aria-label="사이드바 토글">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <a href="index.html" class="header__logo">Prompt<span>Craft</span></a>
+</header>
+
+<div class="sidebar-overlay"></div>
+
+<aside class="sidebar">
+  <div class="sidebar__section">
+    <div class="sidebar__title">페이지</div>
+    <ul class="sidebar__nav">
+      <li><a href="index.html">PRD</a></li>
+      <li><a href="architecture.html">아키텍처</a></li>
+      <li><a href="branch-tree.html">분기 트리 스키마</a></li>
+      <li><a href="db-schema.html">DB 스키마</a></li>
+      <li><a href="api-spec.html">API 명세</a></li>
+    </ul>
+  </div>
+  <div class="sidebar__section">
+    <div class="sidebar__title">현재 페이지</div>
+    <div id="toc"></div>
+  </div>
+</aside>
+
+<main class="content">
+  <h1>API 명세 <span class="subtitle">PromptCraft</span></h1>
+
+  <hr>
+
+  <h2 id="overview">1. 개요</h2>
+  <ul>
+    <li><strong>Base URL</strong>: <code>http://localhost:3000/api</code></li>
+    <li><strong>Content-Type</strong>: <code>application/json</code></li>
+    <li><strong>인증</strong>: 없음 (로컬 전용 서버)</li>
+    <li><strong>에러 응답 형식</strong>: 모든 에러는 아래 구조를 따른다</li>
+  </ul>
+
+  <pre><code class="language-json">{
+  "error": {
+    "code": "SCAN_PATH_NOT_FOUND",
+    "message": "지정한 경로가 존재하지 않습니다"
+  }
+}</code></pre>
+
+  <hr>
+
+  <h2 id="endpoints">2. 엔드포인트 목록</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>설명</th><th>우선순위</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td>/api/scan</td><td>프로젝트 디렉토리 스캔</td><td>P0</td></tr>
+        <tr><td>GET</td><td>/api/trees</td><td>사용 가능한 분기 트리 목록</td><td>P0</td></tr>
+        <tr><td>GET</td><td>/api/trees/:treeId</td><td>특정 트리 상세 조회</td><td>P0</td></tr>
+        <tr><td>POST</td><td>/api/qna/start</td><td>질의응답 세션 시작</td><td>P0</td></tr>
+        <tr><td>POST</td><td>/api/qna/answer</td><td>질문에 응답 (다음 질문 반환)</td><td>P0</td></tr>
+        <tr><td>POST</td><td>/api/prompt/build</td><td>프롬프트 생성</td><td>P0</td></tr>
+        <tr><td>POST</td><td>/api/context/generate</td><td>컨텍스트 파일 생성</td><td>P0</td></tr>
+        <tr><td>GET</td><td>/api/history</td><td>히스토리 목록 조회</td><td>P1</td></tr>
+        <tr><td>GET</td><td>/api/history/:id</td><td>히스토리 상세 조회</td><td>P1</td></tr>
+        <tr><td>DELETE</td><td>/api/history/:id</td><td>히스토리 삭제</td><td>P1</td></tr>
+        <tr><td>GET</td><td>/api/templates</td><td>템플릿 목록 조회</td><td>P1</td></tr>
+        <tr><td>POST</td><td>/api/templates</td><td>템플릿 저장</td><td>P1</td></tr>
+        <tr><td>DELETE</td><td>/api/templates/:id</td><td>템플릿 삭제</td><td>P1</td></tr>
+        <tr><td>GET</td><td>/api/config</td><td>설정 조회</td><td>P1</td></tr>
+        <tr><td>PUT</td><td>/api/config</td><td>설정 업데이트</td><td>P1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h2 id="endpoint-details">3. 엔드포인트 상세</h2>
+
+  <h3 id="scan">3.1 POST /api/scan</h3>
+  <p>프로젝트 디렉토리를 스캔하여 언어, 프레임워크, 구조 정보를 반환한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "path": "C:/Users/user/my-project",
+  "useCache": true
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>path</td><td>string</td><td>O</td><td>스캔할 디렉토리 절대 경로</td></tr>
+        <tr><td>useCache</td><td>boolean</td><td>-</td><td>캐시 사용 여부 (기본: true)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "scanResult": {
+    "path": "C:/Users/user/my-project",
+    "languages": [
+      { "name": "JavaScript", "extension": ".js", "count": 45, "percentage": 62.5 }
+    ],
+    "frameworks": [
+      { "name": "Express", "version": "4.18.2", "source": "package.json" }
+    ],
+    "structure": {
+      "name": "my-project",
+      "children": [
+        { "name": "src", "children": ["components", "utils"] }
+      ]
+    },
+    "packageManager": "npm",
+    "hasEnv": true,
+    "configFiles": ["package.json", ".eslintrc.js"],
+    "scannedAt": "2026-03-06T12:00:00Z"
+  },
+  "fromCache": false
+}</code></pre>
+
+  <h4>Error</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>코드</th><th>HTTP</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>SCAN_PATH_NOT_FOUND</td><td>400</td><td>경로가 존재하지 않음</td></tr>
+        <tr><td>SCAN_PATH_NOT_DIR</td><td>400</td><td>경로가 디렉토리가 아님</td></tr>
+        <tr><td>SCAN_TIMEOUT</td><td>408</td><td>스캔 시간 초과 (5초)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h3 id="trees">3.2 GET /api/trees</h3>
+  <p>사용 가능한 분기 트리 목록을 반환한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "trees": [
+    {
+      "treeId": "error-solving",
+      "name": "에러 해결",
+      "description": "에러 메시지 기반으로 문제를 구조화합니다",
+      "isCustom": false
+    },
+    {
+      "treeId": "feature-impl",
+      "name": "기능 구현",
+      "description": "새 기능 구현을 위한 요구사항을 구조화합니다",
+      "isCustom": false
+    }
+  ]
+}</code></pre>
+
+  <hr>
+
+  <h3 id="tree-detail">3.3 GET /api/trees/:treeId</h3>
+  <p>특정 트리의 전체 구조를 반환한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "tree": {
+    "treeId": "error-solving",
+    "name": "에러 해결",
+    "description": "에러 메시지 기반으로 문제를 구조화합니다",
+    "version": "1.0.0",
+    "entryNodeId": "language",
+    "nodes": { "..." : "..." }
+  }
+}</code></pre>
+
+  <h4>Error</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>코드</th><th>HTTP</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>TREE_NOT_FOUND</td><td>404</td><td>해당 treeId가 존재하지 않음</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h3 id="qna-start">3.4 POST /api/qna/start</h3>
+  <p>질의응답 세션을 시작하고 첫 번째 질문을 반환한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "treeId": "error-solving",
+  "scanResult": { "..." : "..." }
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>treeId</td><td>string</td><td>O</td><td>사용할 분기 트리 ID</td></tr>
+        <tr><td>scanResult</td><td>object</td><td>-</td><td>스캔 결과 (autoFill에 사용)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "question": {
+    "nodeId": "language",
+    "question": "사용 중인 언어와 버전은 무엇인가요?",
+    "type": "text",
+    "key": "language",
+    "required": true,
+    "placeholder": "예: JavaScript (Node.js 20)",
+    "autoFilledValue": "JavaScript"
+  },
+  "progress": {
+    "current": 1,
+    "estimated": 6
+  }
+}</code></pre>
+
+  <hr>
+
+  <h3 id="qna-answer">3.5 POST /api/qna/answer</h3>
+  <p>현재 질문에 응답하고 다음 질문 또는 완료 상태를 반환한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "answer": "JavaScript (Node.js 20)"
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>sessionId</td><td>string</td><td>O</td><td>세션 ID</td></tr>
+        <tr><td>answer</td><td>string | boolean | array</td><td>O</td><td>사용자 응답 (type에 따라 형식 상이)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200 — 다음 질문</h4>
+  <pre><code class="language-json">{
+  "completed": false,
+  "question": {
+    "nodeId": "error-message",
+    "question": "에러 메시지를 붙여넣어 주세요.",
+    "type": "textarea",
+    "key": "errorMessage",
+    "required": true,
+    "placeholder": "..."
+  },
+  "progress": {
+    "current": 2,
+    "estimated": 6
+  }
+}</code></pre>
+
+  <h4>Response 200 — 완료</h4>
+  <pre><code class="language-json">{
+  "completed": true,
+  "answers": {
+    "language": "JavaScript (Node.js 20)",
+    "errorMessage": "TypeError: Cannot read property 'map' of undefined",
+    "errorContext": "API 응답 데이터를 렌더링할 때 발생",
+    "triedMethods": "",
+    "desiredResult": "API 응답이 없을 때 빈 배열로 처리",
+    "constraints": ""
+  }
+}</code></pre>
+
+  <h4>Error</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>코드</th><th>HTTP</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>SESSION_NOT_FOUND</td><td>404</td><td>세션이 존재하지 않거나 만료됨</td></tr>
+        <tr><td>ANSWER_REQUIRED</td><td>400</td><td>필수 질문에 빈 응답</td></tr>
+        <tr><td>INVALID_ANSWER_TYPE</td><td>400</td><td>응답 형식이 질문 타입과 불일치</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h3 id="prompt-build">3.6 POST /api/prompt/build</h3>
+  <p>수집된 데이터로 프롬프트를 생성한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "treeId": "error-solving",
+  "scanResult": { "..." : "..." },
+  "answers": { "..." : "..." },
+  "templateId": null,
+  "saveToHistory": true
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>treeId</td><td>string</td><td>O</td><td>분기 트리 ID</td></tr>
+        <tr><td>scanResult</td><td>object</td><td>-</td><td>스캔 결과</td></tr>
+        <tr><td>answers</td><td>object</td><td>O</td><td>QnA 응답</td></tr>
+        <tr><td>templateId</td><td>string</td><td>-</td><td>사용할 템플릿 ID (null이면 기본)</td></tr>
+        <tr><td>saveToHistory</td><td>boolean</td><td>-</td><td>히스토리 저장 여부 (기본: true)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "prompt": "## 프로젝트 컨텍스트\n- Stack: JavaScript (Node.js 20), Express 4.18.2\n...",
+  "historyId": "660e8400-e29b-41d4-a716-446655440001"
+}</code></pre>
+
+  <hr>
+
+  <h3 id="context-generate">3.7 POST /api/context/generate</h3>
+  <p>컨텍스트 파일을 생성한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "scanResult": { "..." : "..." },
+  "formats": ["claude", "gemini", "cursorrules"],
+  "customRules": {
+    "conventions": "ESLint airbnb, async/await only",
+    "constraints": "No deprecated APIs",
+    "testFramework": "Jest"
+  },
+  "outputPath": "C:/Users/user/my-project"
+}</code></pre>
+
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>필수</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>scanResult</td><td>object</td><td>O</td><td>스캔 결과</td></tr>
+        <tr><td>formats</td><td>array</td><td>O</td><td>생성할 포맷 목록</td></tr>
+        <tr><td>customRules</td><td>object</td><td>-</td><td>사용자 추가 규칙</td></tr>
+        <tr><td>outputPath</td><td>string</td><td>-</td><td>파일 저장 경로 (미지정 시 내용만 반환)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "files": [
+    {
+      "format": "claude",
+      "filename": "CLAUDE.md",
+      "content": "# Project Overview\n...",
+      "saved": true,
+      "path": "C:/Users/user/my-project/CLAUDE.md"
+    },
+    {
+      "format": "gemini",
+      "filename": "GEMINI.md",
+      "content": "# Project Context\n...",
+      "saved": true,
+      "path": "C:/Users/user/my-project/GEMINI.md"
+    }
+  ]
+}</code></pre>
+
+  <h4>Error</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>코드</th><th>HTTP</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>OUTPUT_PATH_NOT_WRITABLE</td><td>400</td><td>출력 경로에 쓰기 권한 없음</td></tr>
+        <tr><td>INVALID_FORMAT</td><td>400</td><td>지원하지 않는 포맷</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <h3 id="history-list">3.8 GET /api/history</h3>
+  <p>히스토리 목록을 조회한다.</p>
+
+  <h4>Query Parameters</h4>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>파라미터</th><th>타입</th><th>기본값</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>page</td><td>number</td><td>1</td><td>페이지 번호</td></tr>
+        <tr><td>limit</td><td>number</td><td>20</td><td>페이지당 항목 수</td></tr>
+        <tr><td>search</td><td>string</td><td>-</td><td>프롬프트 내용 검색어</td></tr>
+        <tr><td>treeId</td><td>string</td><td>-</td><td>트리 ID로 필터링</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "items": [
+    {
+      "id": "550e8400-...",
+      "treeId": "error-solving",
+      "scanPath": "C:/Users/user/my-project",
+      "tags": ["auth", "error"],
+      "createdAt": "2026-03-06T12:00:00"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 42,
+    "totalPages": 3
+  }
+}</code></pre>
+
+  <hr>
+
+  <h3 id="history-detail">3.9 GET /api/history/:id</h3>
+  <p>히스토리 상세를 조회한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "id": "550e8400-...",
+  "treeId": "error-solving",
+  "scanPath": "C:/Users/user/my-project",
+  "scanResult": { "..." : "..." },
+  "answers": { "..." : "..." },
+  "prompt": "## 프로젝트 컨텍스트\n...",
+  "tags": ["auth", "error"],
+  "createdAt": "2026-03-06T12:00:00",
+  "updatedAt": "2026-03-06T12:00:00"
+}</code></pre>
+
+  <hr>
+
+  <h3 id="history-delete">3.10 DELETE /api/history/:id</h3>
+  <p>히스토리를 삭제한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "deleted": true
+}</code></pre>
+
+  <hr>
+
+  <h3 id="templates-list">3.11 GET /api/templates</h3>
+  <p>템플릿 목록을 조회한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "templates": [
+    {
+      "id": "...",
+      "name": "기본 에러 해결",
+      "description": "에러 해결용 기본 프롬프트 템플릿",
+      "treeId": "error-solving",
+      "isDefault": true
+    }
+  ]
+}</code></pre>
+
+  <hr>
+
+  <h3 id="templates-save">3.12 POST /api/templates</h3>
+  <p>템플릿을 저장한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "name": "내 커스텀 템플릿",
+  "description": "상세한 에러 해결 템플릿",
+  "treeId": "error-solving",
+  "content": "## Context\n{{#if scanResult}}...{{/if}}",
+  "isDefault": false
+}</code></pre>
+
+  <h4>Response 201</h4>
+  <pre><code class="language-json">{
+  "id": "...",
+  "name": "내 커스텀 템플릿",
+  "createdAt": "2026-03-06T12:00:00"
+}</code></pre>
+
+  <hr>
+
+  <h3 id="templates-delete">3.13 DELETE /api/templates/:id</h3>
+  <p>템플릿을 삭제한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "deleted": true
+}</code></pre>
+
+  <hr>
+
+  <h3 id="config-get">3.14 GET /api/config</h3>
+  <p>전체 설정을 조회한다.</p>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "config": {
+    "ai.provider": null,
+    "ai.model": null,
+    "output.defaultFormat": "claude",
+    "output.copyToClipboard": "true",
+    "scan.maxDepth": "2",
+    "scan.ignorePatterns": "[\"node_modules\",\"dist\",\".git\"]"
+  }
+}</code></pre>
+
+  <hr>
+
+  <h3 id="config-update">3.15 PUT /api/config</h3>
+  <p>설정을 업데이트한다.</p>
+
+  <h4>Request</h4>
+  <pre><code class="language-json">{
+  "key": "output.defaultFormat",
+  "value": "gemini"
+}</code></pre>
+
+  <h4>Response 200</h4>
+  <pre><code class="language-json">{
+  "updated": true,
+  "key": "output.defaultFormat",
+  "value": "gemini"
+}</code></pre>
+
+  <hr>
+
+  <h2 id="session-management">4. QnA 세션 관리</h2>
+  <ul>
+    <li>세션은 <strong>메모리 내 Map</strong>으로 관리 (SQLite에 저장하지 않음)</li>
+    <li>세션 TTL: <strong>30분</strong> (마지막 요청 기준)</li>
+    <li>만료된 세션 접근 시 <code>SESSION_NOT_FOUND</code> 반환</li>
+    <li>서버 재시작 시 세션 소멸 (의도된 동작 — 질의응답은 짧은 작업)</li>
+  </ul>
+
+  <hr>
+
+  <h2 id="status-codes">5. HTTP 상태 코드 정리</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>코드</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td>200</td><td>정상 응답</td></tr>
+        <tr><td>201</td><td>리소스 생성 성공</td></tr>
+        <tr><td>400</td><td>잘못된 요청 (유효성 검증 실패)</td></tr>
+        <tr><td>404</td><td>리소스를 찾을 수 없음</td></tr>
+        <tr><td>408</td><td>요청 시간 초과</td></tr>
+        <tr><td>500</td><td>서버 내부 오류</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>PromptCraft 문서</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+<script src="js/main.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>
